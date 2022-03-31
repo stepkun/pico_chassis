@@ -1,16 +1,16 @@
 
 #/usr/bin/bash!
 
-# toolchain:
-sudo apt update
-sudo apt upgrade -y
+INSTALL_BASE=$HOME/pico
+
+echo "Updating pico SDK's in $INSTALL_BASE"
 
 # pico sdk:
-cd ~/pico/pico-sdk
+cd $INSTALL_DIR/pico-sdk
 git pull
 git submodule update
 
 # micro-ros sdk for pico:
-cd ~/pico/micro_ros_raspberrypi_pico_sdk
+cd $INSTALL_DIR/micro_ros_raspberrypi_pico_sdk
 git pull
 git submodule update
