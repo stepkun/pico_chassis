@@ -6,7 +6,7 @@ INSTALL_BASE=$HOME/pico
 echo "Installing pico SDK's in $INSTALL_BASE"
 
 # toolchain:
-sudo apt install cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib curl wget
+sudo apt install cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib curl wget -y
 
 if [ -d $INSTALL_BASE ]
 then
