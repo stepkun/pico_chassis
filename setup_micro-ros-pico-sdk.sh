@@ -1,5 +1,5 @@
 
-#/usr/bin/bash!
+#!/bin/sh
 
 INSTALL_BASE=$HOME/pico
 
