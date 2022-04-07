@@ -1,0 +1,19 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${MICRO_ROS_PICO_SDK_PATH}/libmicroros/include/**",
+                "${PICO_SDK_PATH}/**",
+                "/opt/ros/${ROS_DISTRO}/include/**"
+            ],
+            "defines": [],
+            "compilerPath": "/bin/arm-none-eabi-gcc",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
