@@ -76,41 +76,19 @@ void cmd_vel_callback(const void * msgin)
     send_float(msg->angular.z);
 }
 
+//-----------------------------------------------------
+// Helper for cretion and deletion
+//-----------------------------------------------------
+bool micro_ros_init_successful;
+rcl_allocator_t allocator;
+rclc_support_t support;
+rcl_node_t node;
+rclc_executor_t executor;
 
-//===================================================
-// main
-//===================================================
-
-int main()
+void create_entities()
 {
-    rcl_ret_t rc;
-
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
-    gpio_put(LED_PIN, false);
-
-    // enable serial communication
-    rmw_uros_set_custom_transport(
-		true,
-		NULL,
-		pico_serial_transport_open,
-		pico_serial_transport_close,
-		pico_serial_transport_write,
-		pico_serial_transport_read
-	);
-
-    // wait for agent
-    while(RCL_RET_OK != rmw_uros_ping_agent(TIMEOUT_MS, 60))
-    {
-        ;
-    }
-
-    rcl_allocator_t allocator = rcl_get_default_allocator();
-
-    rclc_support_t support;
     rclc_support_init(&support, 0, NULL, &allocator);
 
-    rcl_node_t node;
     rclc_node_init_default(&node, node_name, name_space, &support);
 
     // cmd_vel subscriber
@@ -122,8 +100,8 @@ int main()
         cmd_vel_topic_name
     );
 
-    rclc_executor_t executor = rclc_executor_get_zero_initialized_executor();
-    
+    executor = rclc_executor_get_zero_initialized_executor();
+
     // IMPORTANT: Adjust num_handles to the amount of (publisher-) timers and subscriptions that you add
     unsigned int num_handles = 1;
     rclc_executor_init(&executor, &support.context, num_handles, &allocator);
@@ -137,21 +115,71 @@ int main()
         ON_NEW_DATA
     );
 
-
-    // enable multicore
-    multicore_launch_core1(core1_entry);
-
+    micro_ros_init_successful = true;
     gpio_put(LED_PIN, true);
+}
 
-    // run ROS loop
-    rclc_executor_spin(&executor);   
-    
+void destroy_entities()
+{
+    rcl_ret_t rc;
+    // destroy cmd_vel subscribtion
+    rc += rcl_subscription_fini(&cmd_vel_subscriber, &node);
+    // destroy node 
+    rc += rcl_node_fini(&node);
+    // destroy executor
+    rc += rclc_executor_fini(&executor);
+    // destroy support
+	rc += rclc_support_fini(&support);
+
+    micro_ros_init_successful = false;
+    gpio_put(LED_PIN, false);
+}
+
+//===================================================
+// main
+//===================================================
+
+int main()
+{
+    gpio_init(LED_PIN);
+    gpio_set_dir(LED_PIN, GPIO_OUT);
     gpio_put(LED_PIN, false);
 
-    // destroy cmd_vel subscribtion
-    rc = rcl_subscription_fini(&cmd_vel_subscriber, &node);
-    // destroy node 
-    rc = rcl_node_fini(&node);
+    // start second core
+    multicore_launch_core1(core1_entry);
 
+    // enable serial communication
+    rmw_uros_set_custom_transport(
+		true,
+		NULL,
+		pico_serial_transport_open,
+		pico_serial_transport_close,
+		pico_serial_transport_write,
+		pico_serial_transport_read
+	);
+
+    micro_ros_init_successful = false;
+
+    allocator = rcl_get_default_allocator();
+
+    // run ROS loop
+    const int timeout_ms = 50; 
+    const uint8_t attempts = 2;
+    while(true)
+    {
+        if(RMW_RET_OK == rmw_uros_ping_agent(timeout_ms, attempts))
+        {
+            if(!micro_ros_init_successful) {
+                create_entities();
+            } else {
+                rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+            }
+        }
+        else if(micro_ros_init_successful)
+        {
+            destroy_entities();
+        }
+    }
+    
     return 0;
 }
