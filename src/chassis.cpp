@@ -144,9 +144,11 @@ int main()
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
     gpio_put(LED_PIN, false);
+    sleep_ms(1000);
 
     // start second core
     multicore_launch_core1(core1_entry);
+    sleep_ms(1000);
 
     // enable serial communication
     rmw_uros_set_custom_transport(
@@ -157,6 +159,7 @@ int main()
 		pico_serial_transport_write,
 		pico_serial_transport_read
 	);
+    sleep_ms(1000);
 
     micro_ros_init_successful = false;
 
