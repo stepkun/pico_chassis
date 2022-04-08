@@ -62,6 +62,6 @@ target_compile_definitions(${PROJECT_NAME}
 # Generate UF2
 pico_add_extra_outputs(${PROJECT_NAME})
 
-install(CODE "execute_process(COMMAND sh ${PROJECT_SOURCE_DIR}/install_uf2.sh)")
+install(CODE "execute_process(COMMAND sh ${PROJECT_SOURCE_DIR}/install_binary.sh)")
 
 # and still have to handle AMENT_CMAKE_SYMLINK_INSTALL warning
