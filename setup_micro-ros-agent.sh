@@ -4,7 +4,7 @@
 echo "Installing micro-ROS-Agent"
 
 # fastrtps packages are needed for compile
-sudo apt install ros-$ROS_DISTRO-fastrtps ros-$ROS_DISTRO-fastrtps-cmake-module ros-$ROS_DISTRO-fastrtps-dbgsym
+sudo apt install -y ros-$ROS_DISTRO-fastrtps ros-$ROS_DISTRO-fastrtps-cmake-module ros-$ROS_DISTRO-fastrtps-dbgsym
 
 # micro-ROS-Agent:
 cd ..
