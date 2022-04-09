@@ -5,7 +5,7 @@ include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 ###############################################
 ## Micro-ROS pico-hassis                     ##
 ###############################################
-project(pico-chassis C CXX ASM)
+project(pico_chassis C CXX ASM)
 
 pico_sdk_init()
 

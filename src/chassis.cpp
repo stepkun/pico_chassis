@@ -141,14 +141,16 @@ void destroy_entities()
 
 int main()
 {
+    const int delay_ms = 1000;
+
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
     gpio_put(LED_PIN, false);
-    sleep_ms(1000);
+    sleep_ms(delay_ms);
 
     // start second core
     multicore_launch_core1(core1_entry);
-    sleep_ms(1000);
+    sleep_ms(delay_ms);
 
     // enable serial communication
     rmw_uros_set_custom_transport(
@@ -159,7 +161,7 @@ int main()
 		pico_serial_transport_write,
 		pico_serial_transport_read
 	);
-    sleep_ms(1000);
+    sleep_ms(delay_ms);
 
     micro_ros_init_successful = false;
 
@@ -168,14 +170,18 @@ int main()
     // run ROS loop
     const int timeout_ms = 50; 
     const uint8_t attempts = 2;
+    const int looptime_ns = RCL_MS_TO_NS(100);
     while(true)
     {
         if(RMW_RET_OK == rmw_uros_ping_agent(timeout_ms, attempts))
         {
-            if(!micro_ros_init_successful) {
+            if(!micro_ros_init_successful)
+            {
                 create_entities();
-            } else {
-                rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+            } 
+            else 
+            {
+                rclc_executor_spin_some(&executor, looptime_ns);
             }
         }
         else if(micro_ros_init_successful)
