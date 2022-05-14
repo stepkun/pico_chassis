@@ -8,6 +8,7 @@
 #include <rmw_microros/rmw_microros.h>
 
 #include <geometry_msgs/msg/twist.h>
+#include <std_msgs/msg/int32.h>
 
 #include <pico/stdlib.h>
 #include <pico/multicore.h>
@@ -48,14 +49,13 @@ void core1_entry()
 // ROS stuff
 // Run ROS on first core
 //===================================================
-const char * name_space = "chassis";
-const char * node_name = "chassis";
-const unsigned int publishing_interval_ms = 1000;
+const char * name_space = "";
+const char * node_name = "pico_chassis";
 
 //-----------------------------------------------------
-// Subscription topic "/chassis/cmd_vel"
+// Subscription topic "/nodebot1/chassis/cmd_vel"
 //-----------------------------------------------------
-const char * cmd_vel_topic_name = "/chassis/cmd_vel";
+const char * cmd_vel_topic_name = "/nodebot1/chassis/cmd_vel";
 
 rcl_subscription_t cmd_vel_subscriber;
 
@@ -68,12 +68,29 @@ void cmd_vel_callback(const void * msgin)
 {
      uint32_t double_as_unsigned_words[4];
 
-   // Cast received message to used type
+    // Cast received message to used type
     const geometry_msgs__msg__Twist * msg = (const geometry_msgs__msg__Twist *)msgin;
 
     // Process message
     send_float(msg->linear.x);
     send_float(msg->angular.z);
+}
+
+//-----------------------------------------------------
+// Publisher topic "/chassis/alive"
+//-----------------------------------------------------
+const unsigned int alive_interval_ms = 5000;
+const char * alive_topic_name = "/chassis/alive";
+rcl_publisher_t alive_publisher;
+std_msgs__msg__Int32 alive_msg;
+const rosidl_message_type_support_t * alive_support = 
+                    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32);
+rcl_timer_t alive_timer;
+void alive_timer_callback(rcl_timer_t *timer, int64_t last_call_time)
+{
+    // publish values
+    alive_msg.data = 42;
+    rcl_ret_t rc = rcl_publish(&alive_publisher, &alive_msg, NULL);
 }
 
 //-----------------------------------------------------
@@ -91,19 +108,34 @@ void create_entities()
 
     rclc_node_init_default(&node, node_name, name_space, &support);
 
-    // cmd_vel subscriber
+    // best effort cmd_vel subscriber
     cmd_vel_subscriber = rcl_get_zero_initialized_subscription();
-    rclc_subscription_init_default(
+    rclc_subscription_init_best_effort(
         &cmd_vel_subscriber, 
         &node,
         cmd_vel_support, 
         cmd_vel_topic_name
     );
 
+    // best effort rcl publisher
+    rclc_publisher_init_best_effort(
+        &alive_publisher,
+        &node,
+        alive_support,
+        alive_topic_name
+    );
+
+    // alive publishing timer
+    rclc_timer_init_default(
+        &alive_timer, &support, RCL_MS_TO_NS(alive_interval_ms),
+        alive_timer_callback
+    );
+
+
     executor = rclc_executor_get_zero_initialized_executor();
 
     // IMPORTANT: Adjust num_handles to the amount of (publisher-) timers and subscriptions that you add
-    unsigned int num_handles = 1;
+    unsigned int num_handles = 2;
     rclc_executor_init(&executor, &support.context, num_handles, &allocator);
     
     // add cmd_vel subscription to the executor
@@ -115,6 +147,9 @@ void create_entities()
         ON_NEW_DATA
     );
 
+    // add alive publishing timer to the executor
+    rclc_executor_add_timer(&executor, &alive_timer);
+
     micro_ros_init_successful = true;
     gpio_put(LED_PIN, true);
 }
@@ -122,9 +157,12 @@ void create_entities()
 void destroy_entities()
 {
     rcl_ret_t rc;
-    // destroy cmd_vel subscribtion
+    // destroy subscribtions
     rc += rcl_subscription_fini(&cmd_vel_subscriber, &node);
-    // destroy node 
+    // destroy timer
+    rc = rcl_timer_fini(&alive_timer);
+    // destroy publisher
+    rc = rcl_publisher_fini(&alive_publisher, &node);    // destroy node 
     rc += rcl_node_fini(&node);
     // destroy executor
     rc += rclc_executor_fini(&executor);
@@ -148,10 +186,6 @@ int main()
     gpio_put(LED_PIN, false);
     sleep_ms(delay_ms);
 
-    // start second core
-    multicore_launch_core1(core1_entry);
-    sleep_ms(delay_ms);
-
     // enable serial communication
     rmw_uros_set_custom_transport(
 		true,
@@ -163,14 +197,24 @@ int main()
 	);
     sleep_ms(delay_ms);
 
+    // start second core
+    multicore_launch_core1(core1_entry);
+
     micro_ros_init_successful = false;
 
     allocator = rcl_get_default_allocator();
 
-    // run ROS loop
+    // run ROS loop without auto restart
+    // create_entities();
+    // rclc_executor_spin(&executor);
+
+    // if(micro_ros_init_successful)
+    //     destroy_entities();
+
+    // run ROS loop with auto restart
     const int timeout_ms = 50; 
-    const uint8_t attempts = 2;
-    const int looptime_ns = RCL_MS_TO_NS(100);
+    const uint8_t attempts = 5;
+    const int looptime_ns = RCL_MS_TO_NS(333);
     while(true)
     {
         if(RMW_RET_OK == rmw_uros_ping_agent(timeout_ms, attempts))
@@ -189,6 +233,6 @@ int main()
             destroy_entities();
         }
     }
-    
+
     return 0;
 }
