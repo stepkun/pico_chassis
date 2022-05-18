@@ -49,13 +49,13 @@ void core1_entry()
 // ROS stuff
 // Run ROS on first core
 //===================================================
-const char * name_space = "";
+const char * name_space = "local";
 const char * node_name = "pico_chassis";
 
 //-----------------------------------------------------
-// Subscription topic "/nodebot1/chassis/cmd_vel"
+// Subscription topic "/local/chassis/cmd_vel"
 //-----------------------------------------------------
-const char * cmd_vel_topic_name = "/nodebot1/chassis/cmd_vel";
+const char * cmd_vel_topic_name = "/local/chassis/cmd_vel";
 
 rcl_subscription_t cmd_vel_subscriber;
 
@@ -80,7 +80,7 @@ void cmd_vel_callback(const void * msgin)
 // Publisher topic "/chassis/alive"
 //-----------------------------------------------------
 const unsigned int alive_interval_ms = 5000;
-const char * alive_topic_name = "/chassis/alive";
+const char * alive_topic_name = "/local/chassis/alive";
 rcl_publisher_t alive_publisher;
 std_msgs__msg__Int32 alive_msg;
 const rosidl_message_type_support_t * alive_support = 
@@ -162,7 +162,8 @@ void destroy_entities()
     // destroy timer
     rc = rcl_timer_fini(&alive_timer);
     // destroy publisher
-    rc = rcl_publisher_fini(&alive_publisher, &node);    // destroy node 
+    rc = rcl_publisher_fini(&alive_publisher, &node);
+    // destroy node 
     rc += rcl_node_fini(&node);
     // destroy executor
     rc += rclc_executor_fini(&executor);
@@ -207,7 +208,6 @@ int main()
     // run ROS loop without auto restart
     // create_entities();
     // rclc_executor_spin(&executor);
-
     // if(micro_ros_init_successful)
     //     destroy_entities();
 
